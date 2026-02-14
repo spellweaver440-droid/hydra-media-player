@@ -1,0 +1,49 @@
+flowchart LR
+  subgraph UI_Layer[UI Layer]
+    MP[Media Player UI]
+    LC[Live Coding Editor]
+  end
+
+  subgraph Core[Application Core]
+    IPCMain[Main Process / Backend]
+    IPCRenderer[Renderer Process / Frontend]
+    CoreMP[Media Player Core]
+    Playlist[Playlist & Library]
+    FS[File I/O & Metadata]
+  end
+
+  subgraph Audio[Audio Engine]
+    AudioEngine[Audio Engine / DSP]
+    FFT[FFT & Analyzer]
+    Outputs[Audio Output (ALSA / JACK / Pulse)]
+  end
+
+  subgraph Visuals[Visual Engine]
+    VisualEngine[Visual Engine (WebGL / GLSL)]
+    ShaderRunner[Shader Runner / Sandbox]
+  end
+
+  subgraph Network[Network Layer]
+    WS[WebSocket / Control API]
+    UDP[UDP Audio Stream]
+  end
+
+  MP -->|control messages| IPCRenderer
+  LC -->|shader edits / controls| IPCRenderer
+  IPCRenderer -->|IPC calls| IPCMain
+  IPCMain -->|invoke| CoreMP
+
+  CoreMP -->|audio frames| AudioEngine
+  CoreMP -->|metadata & files| FS
+  Playlist -->|selection| CoreMP
+
+  AudioEngine -->|PCM frames| FFT
+  FFT -->|frequency data| VisualEngine
+  VisualEngine -->|renders| ShaderRunner
+  LC -->|live code updates| ShaderRunner
+  ShaderRunner -->|render output| IPCRenderer
+
+  AudioEngine -->|playback| Outputs
+  AudioEngine -->|stream packets| UDP
+  IPCMain <-->|control / remote| WS
+  WS -->|remote effect/control| AudioEngine

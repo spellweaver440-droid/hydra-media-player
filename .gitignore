@@ -1,0 +1,59 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Electron
+dist/
+dist_electron/
+electron-builder-effective-config.yaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.AppleDouble
+.LSOverride
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+.env
+.env.local
+
+# Build outputs
+out/
+*.app
+*.dmg
+*.exe
+
+# Dev
+.cache/
+.parcel-cache/
+
+# User plugins (optional - uncomment to ignore personal plugins)
+# plugins/*.js
+# !plugins/sample-plugin.js
+# !plugins/kaleidoscope.js
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+
+# Electron config
+.config/mediaplayer/
+

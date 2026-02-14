@@ -1,0 +1,33 @@
+{
+  "name": "hydroaplayer",
+  "version": "0.1.0",
+  "description": "Hybrid media player with live visual coding. Combines audio playback + real-time FFT analysis + plugin-based visual engine.",
+  "main": "main.js",
+  "author": "Cody Johnston <johnstoncody1989@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/spellweaver440-droid/hydroaplayer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/spellweaver440-droid/hydroaplayer/issues"
+  },
+  "homepage": "https://github.com/spellweaver440-droid/hydroaplayer#readme",
+  "keywords": [
+    "media-player",
+    "audio-visualization",
+    "live-coding",
+    "electron",
+    "react",
+    "web-audio-api",
+    "visual-coding",
+    "hydra"
+  ],
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^26.0.0"
+  }
+}

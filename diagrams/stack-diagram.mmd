@@ -1,0 +1,41 @@
+graph TB
+  subgraph BrowserLayer[Browser / Web APIs]
+    WebGL[WebGL]
+    WebXR[WebXR]
+  end
+
+  subgraph JS_WASM[JS + WASM Layer]
+    Three[three.js]
+    ARjs[AR.js / AR frameworks]
+    Babylon[Babylon.js]
+    r3f[r3f / A-Frame]
+    WASM[WASM modules (DSP, codecs)]
+  end
+
+  subgraph Engines[Game & 3D Engines]
+    Wonderland[Wonderland Engine]
+    Godot[Godot (Web export)]
+    Unity[Unity (Web exporter)]
+  end
+
+  subgraph Native[Native]
+    GPU[GPU Drivers]
+    XR[XR hardware]
+  end
+
+  Three --> WebGL
+  ARjs --> WebGL
+  Babylon --> WebGL
+  r3f --> WebGL
+  WASM --> WebGL
+
+  Engines --> WebGL
+  Engines --> WebXR
+
+  GPU --> WebGL
+  XR --> WebXR
+
+  style JS_WASM fill:#a8e6cf,stroke:#2b7a78
+  style BrowserLayer fill:#ffd3b6,stroke:#ff7b00
+  style Engines fill:#c7ceea,stroke:#6b5b95
+  style Native fill:#ffb3b3,stroke:#9b2222
