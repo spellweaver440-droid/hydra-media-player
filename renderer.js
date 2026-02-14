@@ -8,23 +8,49 @@ function App() {
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const analyserRef = useRef(null);
   const audioCtxRef = useRef(null);
   const freqDataRef = useRef(null);
   const canvasRef = useRef(null);
   const [userCode, setUserCode] = useState(defaultVisualCode);
+  const [debugInfo, setDebugInfo] = useState('');
+  const [execStatus, setExecStatus] = useState('');
+  const userCodeRef = useRef(defaultVisualCode);
 
   useEffect(() => {
     setupMatrixBackground();
     startRenderLoop();
     
-    // Listen for plugins list from main process
-    if (window.electronAPI) {
-      window.electronAPI.on('plugins-list', (pluginsList) => {
-        setPlugins(pluginsList);
-      });
-    }
+    // Request plugins from main process
+    const loadPlugins = async () => {
+      if (window.electronAPI && window.electronAPI.invoke) {
+        try {
+          console.log('Requesting plugins from main process...');
+          const pluginsList = await window.electronAPI.invoke('get-plugins');
+          console.log('✓ Received plugins:', pluginsList);
+          console.log('Plugin count:', pluginsList?.length || 0);
+          setDebugInfo(`Loaded ${pluginsList?.length || 0} plugins`);
+          setPlugins(pluginsList || []);
+        } catch (error) {
+          console.error('❌ Failed to load plugins:', error);
+          setDebugInfo('Error loading plugins');
+        }
+      } else {
+        console.warn('❌ electronAPI.invoke not available');
+        setDebugInfo('electronAPI unavailable');
+      }
+    };
+    
+    loadPlugins();
   }, []);
+
+  // Update the ref whenever userCode changes
+  useEffect(() => {
+    userCodeRef.current = userCode;
+    console.log('User code updated, length:', userCode.length);
+  }, [userCode]);
 
   function setupMatrixBackground() {
     const canvas = document.getElementById('bg-matrix');
@@ -66,7 +92,7 @@ function App() {
       const audioData = freqDataRef.current ? freqDataRef.current.slice() : new Uint8Array(128);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       try {
-        const userFn = new Function('canvas','ctx','audioData', userCode);
+        const userFn = new Function('canvas','ctx','audioData', userCodeRef.current);
         userFn(canvas, ctx, audioData);
       } catch (e) {
         ctx.fillStyle = '#fff';
@@ -109,6 +135,12 @@ function App() {
 
     a.addEventListener('timeupdate', () => {
       if (analyserRef.current) analyserRef.current.getByteFrequencyData(freqDataRef.current);
+      setCurrentTime(a.currentTime);
+      setDuration(a.duration);
+    });
+
+    a.addEventListener('loadedmetadata', () => {
+      setDuration(a.duration);
     });
 
     a.addEventListener('ended', () => {
@@ -175,6 +207,23 @@ function App() {
           />
           <span className="volume-label">{Math.round((muted ? 0 : volume) * 100)}%</span>
         </div>
+        
+        <div className="progress-control">
+          <div className="progress-bar-container" onClick={(e) => {
+            if (!audio || !duration) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percent = clickX / rect.width;
+            audio.currentTime = percent * duration;
+          }}>
+            <div className="progress-fill" style={{ width: duration ? `${(currentTime / duration) * 100}%` : '0%' }}></div>
+          </div>
+          <div className="time-display">
+            <span>{Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, '0')}</span>
+            <span>{Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}</span>
+          </div>
+        </div>
+        
         <div className="playlist">
           <h3>Playlist</h3>
           <ul>
@@ -187,7 +236,12 @@ function App() {
           </ul>
         </div>
         <div className="plugins-panel">
-          <h3>Plugins</h3>
+          <h3>Plugins {plugins.length > 0 && `(${plugins.length})`}</h3>
+          {plugins.length === 0 && (
+            <p style={{fontSize: '11px', color: '#aaa', marginTop: '8px'}}>
+              {debugInfo || 'Loading plugins...'}
+            </p>
+          )}
           <ul>
             {plugins.map((plugin, i) => (
               <li key={i}>
@@ -200,6 +254,7 @@ function App() {
                   onClick={() => {
                     if (plugin.visualCode) {
                       setUserCode(plugin.visualCode);
+                      console.log('Loaded plugin:', plugin.name);
                     }
                   }}
                 >
@@ -233,6 +288,61 @@ function App() {
         <div className="editor">
           <h3>Live Visual Editor</h3>
           <textarea value={userCode} onChange={(e)=>setUserCode(e.target.value)} />
+          <button 
+            className="run-code-btn"
+            onClick={() => {
+              try {
+                // Get latest code from ref
+                const code = userCodeRef.current;
+                
+                // Clear any plugin animation state
+                window._alchemyState = null;
+                window._particleState = null;
+                
+                // Validate the code by trying to create a function
+                const testFn = new Function('canvas','ctx','audioData', code);
+                
+                // Get current audio data
+                const audioData = freqDataRef.current ? freqDataRef.current.slice() : new Uint8Array(128);
+                
+                // Execute immediately with current audio data on the render canvas
+                if (canvasRef.current) {
+                  const canvas = canvasRef.current;
+                  const ctx = canvas.getContext('2d');
+                  // Clear the canvas first
+                  ctx.clearRect(0, 0, canvas.width, canvas.height);
+                  // Execute the code
+                  testFn(canvas, ctx, audioData);
+                }
+                
+                setExecStatus('✓ Code executed!');
+                console.log('✓ Code executed successfully');
+                
+                // Clear status after 2 seconds
+                setTimeout(() => setExecStatus(''), 2000);
+              } catch (error) {
+                setExecStatus('✗ Error: ' + error.message.substring(0, 30));
+                console.error('Code execution error:', error.message);
+                setTimeout(() => setExecStatus(''), 3000);
+              }
+            }}
+          >
+            ▶ Execute Code
+          </button>
+          {execStatus && (
+            <div style={{
+              marginTop: '6px',
+              fontSize: '12px',
+              padding: '8px',
+              borderRadius: '4px',
+              textAlign: 'center',
+              background: execStatus.includes('✓') ? 'rgba(0,255,100,0.2)' : 'rgba(255,50,50,0.2)',
+              color: execStatus.includes('✓') ? '#00ff64' : '#ff3232',
+              border: `1px solid ${execStatus.includes('✓') ? 'rgba(0,255,100,0.4)' : 'rgba(255,50,50,0.4)'}`
+            }}>
+              {execStatus}
+            </div>
+          )}
         </div>
       </div>
     </div>
